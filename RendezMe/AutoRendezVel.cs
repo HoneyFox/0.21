@@ -39,8 +39,17 @@ class AutoRendezVel
         BurnAtPe = 1,
     }
 
+	public enum BurnType
+	{
+		Invalid = -1,
+ 		ProgradeBurn = 0,
+		RetrogradeBurn = 1,
+	}
+
+
     public RendezState m_rendezState = RendezState.Invalid;
     public RendezMode m_rendezMode = RendezMode.Invalid;
+	public BurnType m_burnType = BurnType.Invalid;
     public double m_recordedVelocity = 0;
 
     Vessel m_ownVessel = null;
@@ -246,11 +255,11 @@ class AutoRendezVel
                 }
                 else if (timeToExitWarp)
                 {
-                    TimeWarp.SetRate(0, false);
+                    TimeWarp.SetRate(0, true);
                 }
                 else if (timeToExitHighWarp)
                 {
-                    TimeWarp.SetRate(1, false);
+                    TimeWarp.SetRate(1, true);
                 }
 
                 break;
@@ -262,26 +271,44 @@ class AutoRendezVel
                 )
                 {
                     //Debug.Log("Direction set, burn engine now.");
-                    m_rendezState = RendezState.BurnEngine;
+					m_rendezState = RendezState.BurnEngine;
                     m_turnUpdates = 0;
                     m_ownVessel.ActionGroups.SetGroup(KSPActionGroup.SAS, true);
                 }
                 else
                 {
+					if (m_turnUpdates == 0)
+					{
+						m_burnType = (m_ownVessel.orbit.vel.magnitude > m_recordedVelocity) ? BurnType.RetrogradeBurn : BurnType.ProgradeBurn;
+					}
                     m_turnUpdates++;
                 }
                 break;
             }
             case RendezState.BurnEngine:
             {
-                if (Math.Abs(m_ownVessel.orbit.vel.magnitude - m_recordedVelocity) < s_thresholdVelocity)
-                {
-                    //Debug.Log("Velocity reached.");
-                    FinalizeSystem();
-                    flyByWire = false;
-                    modeChanged = true;
-                    m_ownVessel.ActionGroups.SetGroup(KSPActionGroup.SAS, false);
-                }
+				if (m_burnType == BurnType.ProgradeBurn)
+				{
+					if (m_ownVessel.orbit.vel.magnitude - m_recordedVelocity > -s_thresholdVelocity)
+					{
+						//Debug.Log("Velocity reached.");
+						FinalizeSystem();
+						flyByWire = false;
+						modeChanged = true;
+						m_ownVessel.ActionGroups.SetGroup(KSPActionGroup.SAS, false);
+					}
+				}
+				else if(m_burnType == BurnType.RetrogradeBurn)
+				{
+					if (m_ownVessel.orbit.vel.magnitude - m_recordedVelocity < s_thresholdVelocity)
+					{
+						//Debug.Log("Velocity reached.");
+						FinalizeSystem();
+						flyByWire = false;
+						modeChanged = true;
+						m_ownVessel.ActionGroups.SetGroup(KSPActionGroup.SAS, false);
+					}
+				}
                 break;
             }
         }
@@ -291,6 +318,7 @@ class AutoRendezVel
     {
         m_rendezState = RendezState.Invalid;
         m_rendezMode = RendezMode.Invalid;
+		m_burnType = BurnType.Invalid;
         m_ownVessel = null;
         m_targetVessel = null;
         m_recordedVelocity = 0;
@@ -319,7 +347,7 @@ class AutoRendezVel
         {
             string stateStr = "";
             string burnPoint = (m_rendezMode == RendezMode.BurnAtAp) ? "Ap" : "Pe";
-            string turnDir = (m_recordedVelocity > m_velCurrent) ? "Prograde" : "Retrograde";
+            string turnDir = (m_burnType == BurnType.ProgradeBurn) ? "Prograde" : "Retrograde";
             string errorStr = (m_headingError.ToString("F1") + " " + m_turnRate.ToString("F1"));
             string velStr = m_velCurrent.ToString("F1") + "/" + m_recordedVelocity.ToString("F1");
             if (m_rendezState == RendezState.Initialize) stateStr = "Initializing...";

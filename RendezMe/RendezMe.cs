@@ -2190,7 +2190,7 @@ public class RendezMe : Part
 
     protected override void onPartStart()
     {
-        FlightInputHandler.OnFlyByWire += new FlightInputCallback(DriveShip);
+        vessel.OnFlyByWire += new FlightInputCallback(DriveShip);
         if ((WindowPos.x == 0) && (WindowPos.y == 0))
         {
             WindowPos = new Rect(Screen.width - 360, 10, 10, 10);
