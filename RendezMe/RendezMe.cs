@@ -333,6 +333,8 @@ public class RendezMe : Part
         {
             Mode = UIMode.OFF;
         }
+
+		bool selectTargetVessel = GUILayout.Button("Use Current Target", sty, GUILayout.ExpandWidth(true));
         GUILayout.Box("Select Target");
 
         //TODO: ADD BODY SUPPORT
@@ -346,6 +348,34 @@ public class RendezMe : Part
         vdc.OriginVessel = vessel;
 
         vesselList.Sort(vdc);
+
+		if (selectTargetVessel)
+		{
+			if (FlightGlobals.fetch != null && FlightGlobals.fetch.VesselTarget != null && FlightGlobals.fetch.VesselTarget.GetVessel() != null)
+			{
+				for (int i = 0; i < vesselList.Count; i++)
+				{
+					// Skip ourselves.
+					if (vesselList[i] == vessel)
+						continue;
+
+					//if (vesselList[i].LandedOrSplashed)
+					//    continue;
+
+					// Skip stuff around other worlds.
+					if (vessel.orbit.referenceBody != vesselList[i].orbit.referenceBody)
+						continue;
+
+					if (vesselList[i] == FlightGlobals.fetch.VesselTarget.GetVessel())
+					{
+						Mode = UIMode.SELECTED;
+						_selectedVesselInstanceId = vesselList[i].GetInstanceID();
+						_selectedVesselIndex = FlightGlobals.Vessels.IndexOf(vesselList[i]);
+						break;
+					}
+				}
+			}
+		}
 
         for (int i = 0; i < vesselList.Count; i++)
         {
