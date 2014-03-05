@@ -54,6 +54,9 @@ public class RendezMe : Part
 
     private bool addedToDrawQueue = false;
 
+	private FlightInputCallback ctrlCallback = null;
+	private Vessel controlledVessel = null;
+
     protected Rect WindowPos;
 
     private Vector2 _scrollPosition = new Vector2(0, 0);
@@ -1422,6 +1425,16 @@ public class RendezMe : Part
         if (RendezMe.claimingController != this)
             return;
 
+		if (controlledVessel != null)
+		{
+			if (controlledVessel != this.vessel && ctrlCallback != null)
+			{
+				controlledVessel.OnFlyByWire -= ctrlCallback;
+				this.vessel.OnFlyByWire += ctrlCallback;
+				controlledVessel = this.vessel;
+			}
+		}
+
         Vessel selectedVessel = FlightGlobals.Vessels[_selectedVesselIndex] as Vessel;
 
         if(_autoAlign)
@@ -2101,8 +2114,10 @@ public class RendezMe : Part
     protected override void onPartDestroy() //Called when the part is destroyed
     {
         _flyByWire = false;
+		if (controlledVessel != null && ctrlCallback != null)
+			controlledVessel.OnFlyByWire -= ctrlCallback;
         if(addedToDrawQueue)
-        RenderingManager.RemoveFromPostDrawQueue(3, DrawGUI);
+			RenderingManager.RemoveFromPostDrawQueue(3, DrawGUI);
     }
 
     protected override void onPartUpdate()
@@ -2220,7 +2235,12 @@ public class RendezMe : Part
 
     protected override void onPartStart()
     {
-        vessel.OnFlyByWire += new FlightInputCallback(DriveShip);
+		if (vessel != null)
+		{
+			ctrlCallback = new FlightInputCallback(DriveShip);
+			vessel.OnFlyByWire += ctrlCallback;
+			controlledVessel = this.vessel;
+		}
         if ((WindowPos.x == 0) && (WindowPos.y == 0))
         {
             WindowPos = new Rect(Screen.width - 360, 10, 10, 10);
